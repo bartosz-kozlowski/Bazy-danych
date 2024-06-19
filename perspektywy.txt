@@ -1,0 +1,63 @@
+1.
+CREATE OR REPLACE VIEW ASYSTENCI (nazwisko, placa, staz) AS
+SELECT nazwisko, PLACA_POD + NVL(PLACA_DOD, 0) AS placa,
+'lat: ' || TRUNC(MONTHS_BETWEEN(TO_DATE('2024/01/01', 'YYYY/MM/DD'), ZATRUDNIONY) / 12) ||
+', miesięcy: ' || MOD(TRUNC(MONTHS_BETWEEN(TO_DATE('2024/01/01', 'YYYY/MM/DD'), ZATRUDNIONY)), 12) AS staz
+FROM PRACOWNICY WHERE ETAT = 'ASYSTENT';
+
+SELECT nazwisko, placa, staz FROM ASYSTENCI;
+
+2.
+
+CREATE OR REPLACE VIEW PLACE (numer_zespolu, srednia, minimalna, maksymalna, fundusz_plac, liczba_pensji, liczba_dodatkow)
+AS (select ID_ZESP, round(avg(PLACA_POD + coalesce(PLACA_DOD, 0)), 2), min(PLACA_POD + coalesce(PLACA_DOD, 0)),
+max(PLACA_POD + coalesce(PLACA_DOD, 0)), sum(PLACA_POD + coalesce(PLACA_DOD, 0)), count(PLACA_POD), count(PLACA_DOD) FROM PRACOWNICY GROUP BY ID_ZESP);
+
+SELECT * FROM PLACE ORDER BY numer_zespolu;
+
+3.
+
+SELECT nazwisko, PLACA_POD FROM PRACOWNICY, PLACE p WHERE PLACA_POD < p.srednia AND ID_ZESP = p.numer_zespolu ORDER BY NAZWISKO;
+
+4.
+
+CREATE OR REPLACE VIEW PLACE_MINIMALNE (id_prac, nazwisko, etat, placa_pod) AS
+SELECT ID_ZESP, NAZWISKO, ETAT, PLACA_POD FROM PRACOWNICY WHERE PLACA_POD < 700
+WITH CHECK OPTION CONSTRAINT za_wysoka_placa;
+
+select *
+from PLACE_MINIMALNE;
+
+5.
+
+UPDATE PLACE_MINIMALNE
+SET placa_pod = 800
+WHERE nazwisko = 'HAPKE';
+
+6.
+
+CREATE OR REPLACE VIEW PRAC_SZEF (id_prac, id_szefa, pracownik, etat, szef) as
+(select p.id_prac, p.id_szefa, p.nazwisko, p.etat, s.nazwisko from PRACOWNICY p, PRACOWNICY s where p.ID_SZEFA = s.ID_PRAC);
+
+INSERT INTO PRAC_SZEF (ID_PRAC, ID_SZEFA, PRACOWNIK, ETAT)
+VALUES (280,150, 'MORZY','ASYSTENT');
+
+UPDATE PRAC_SZEF SET ID_SZEFA = 130 WHERE ID_PRAC = 280;
+
+DELETE FROM PRAC_SZEF WHERE ID_PRAC = 280;
+select * from PRAC_SZEF order by pracownik;
+
+7.
+
+CREATE OR REPLACE VIEW ZAROBKI (id_prac, nazwisko, etat, placa_pod) AS
+select p.id_prac, p.nazwisko, p.etat, p.placa_pod from PRACOWNICY p, PRACOWNICY s where p.ID_SZEFA = s.ID_PRAC and p.PLACA_POD < s.PLACA_POD
+WITH CHECK OPTION CONSTRAINT wysoka_placa;
+
+8.
+
+SELECT COLUMN_NAME, UPDATABLE, INSERTABLE, DELETABLE
+FROM USER_UPDATABLE_COLUMNS WHERE TABLE_NAME = 'PRAC_SZEF';
+
+ad.
+SELECT VIEW_NAME, TEXT
+FROM USER_VIEWS;
